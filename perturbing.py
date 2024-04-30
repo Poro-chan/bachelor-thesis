@@ -46,26 +46,6 @@ def evaluate(testloader, model):
   print('Accuracy: {}/{} ({:.2f}%)\n'.format(
           correct, dataset_size, 100. * correct / dataset_size))
 
-def tensor_to_bits(tensor):
-    original_type = tensor.dtype
-
-    if tensor.dtype != torch.uint8:
-        tensor = tensor.to(torch.uint8)
-
-    array = tensor.numpy()
-    bits = np.unpackbits(array)
-
-    if original_type != torch.uint8:
-        tensor.to(original_type)
-    return bits
-
-def bits_to_tensor(bits, dtype):
-    array = np.packbits(bits)
-    tensor = torch.from_numpy(array).to(torch.uint8)
-    tensor = tensor.to(dtype)
-    return tensor
-
-
 #custom function for bitflip and multiply values by 1+epsilon
 class custom_func(fault_injection):
     def __init__(self, model, batch_size, epsilon, **kwargs):
@@ -78,10 +58,8 @@ class custom_func(fault_injection):
 
         byte_output = output_detached.numpy().view(np.uint8)
         
-        #for epsilon in self.epsilon :
         index = self.epsilon // 8
         bit_in_byte = self.epsilon % 8
-
         byte_output[index::output.element_size()] ^= 1 << bit_in_byte
 
         byte_output = byte_output.view(dtype=np.dtype(output_detached.numpy().dtype))
@@ -105,8 +83,6 @@ transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Resize((224, 224)),
         transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-        #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        #transforms.Normalize((0.1307,), (0.3081,))
 ])
 
 batch_size = 100
@@ -158,7 +134,6 @@ p_custom2 = custom_func(model, batch_size, e, input_shape=[3,224,224], layer_typ
 perturbed_model2 = p_custom2.declare_neuron_fi(function=p_custom2.single_bit_flip)
 perturbed_model2.eval()
 
-p = FaultInjection(model, batch_size=batch_size, use_cuda=False)
 epsilon = 0.01
 while epsilon < 0.51:
     p_custom = custom_func(model, batch_size, epsilon, input_shape=[3,224,224], layer_types=[torch.nn.Conv2d], use_cuda=False)
@@ -173,7 +148,7 @@ print("Accuracy of the model with single bitflip, flipped {} for mnist:".format(
 evaluate(testloader, perturbed_model2)
 exit(0)
 #for all models
-if __name__ == '__main__':
+'''if __name__ == '__main__':
     models_names = ['densenet121',
                     'googlenet',
                     'inception_v3',
@@ -189,4 +164,4 @@ if __name__ == '__main__':
         except RuntimeError:
             print(f"Model {model_name} not available in the hub.")
         except ValueError:
-            print(f"Model {model_name} has no pretrained weights.")
+            print(f"Model {model_name} has no pretrained weights.")'''
