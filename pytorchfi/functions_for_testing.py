@@ -2,11 +2,13 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from pytorchfi.core import FaultInjection
+import warnings
+from core import FaultInjection
 
 def train(model, device, train_loader, optimizer, epochs):
     loss_func = nn.CrossEntropyLoss()
     for epoch in range(epochs):
+        print("\nEpoch: {}".format(epoch+1))
         model.train()
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
@@ -28,7 +30,6 @@ def evaluate(testloader, model, device):
   dataset_size = len(testloader.dataset)
   correct = 0
   model.eval()
-
   with torch.no_grad():
       for image, label in testloader:
           image, label = image.to(device), label.to(device)
@@ -41,33 +42,44 @@ def evaluate(testloader, model, device):
 
 #custom function for bitflip and multiply values by 1+epsilon
 class custom_func(FaultInjection):
-    def __init__(self, model, batch_size, epsilon, **kwargs):
+    def __init__(self, model, batch_size, epsilon, index, **kwargs):
         super().__init__(model, batch_size, **kwargs)
         self.epsilon = epsilon
+        self.index = index
 
-    #bitflip
+    #single bitflip in 32-bit representation
     def single_bit_flip(self, module, input, output) :
-        output_detached = output.detach().cpu() if output.requires_grad else output.cpu()
+        shape = output.shape
+        output_cpu = output.detach().cpu().flatten()
+        int32_output = output_cpu.numpy().view(np.int32)
 
-        byte_output = output_detached.numpy().view(np.uint8)
-        
-        #for epsilon in self.epsilon :
-        index = self.epsilon // 8
-        bit_in_byte = self.epsilon % 8
+        bit_array = np.unpackbits(int32_output.view(np.uint8))
+        #bit_array[self.index] = 1 - bit_array[self.index]
+        int32_output = np.packbits(bit_array).view(np.int32)
 
-        byte_output[index::output.element_size()] ^= 1 << bit_in_byte
+        float_output = torch.from_numpy(int32_output.view(np.float32))
+        float_output = float_output.reshape(shape)
 
-        byte_output = byte_output.view(dtype=np.dtype(output_detached.numpy().dtype))
-
-        output[:] = torch.from_numpy(byte_output).to(output.dtype)
+        if output.is_cuda :
+            output.data.copy_(float_output.to(output.device))
+        else:
+            output.data.copy_(float_output)
 
         self.update_layer()
         if self.current_layer >= self.get_total_layers():
             self.reset_current_layer()
     
-    #mutiply by a factor
+    #mutiply all output by a factor
     def multiply_output(self, module, input, output) :
         output[:] = output * (1+self.epsilon)
+
+        self.update_layer()
+        if self.current_layer >= self.get_total_layers():
+            self.reset_current_layer()
+
+    #multiply only one value by a factor
+    def multiply_value(self, module, input, output) :
+        output[self.index] = output[self.index] * (1+self.epsilon)
 
         self.update_layer()
         if self.current_layer >= self.get_total_layers():
