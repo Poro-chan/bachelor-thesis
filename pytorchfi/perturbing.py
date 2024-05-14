@@ -36,13 +36,13 @@ cifar100trainset = torchvision.datasets.CIFAR100(root='./data', train=True, down
 cifar100trainloader = torch.utils.data.DataLoader(cifar100dataset, batch_size=batch_size, shuffle=True)
 
 # Load pretrained model
-model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
+model = torch.hub.load('pytorch/vision:v0.10.0', 'googlenet', pretrained=True) # densenet121, googlenet, inception_v3, mobilenet_v2, resnet18, squeezenet1_0, squeezenet1_1
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #model.fc = torch.nn.Linear(model.fc.in_features, 10) #for inception_v3
 #model.classifier[1] = torch.nn.Linear(in_features=model.classifier[1].in_features, out_features=10) # for mobilenet_v2
 model.to(device)
 
-learning_rate = 1.0
+learning_rate = 0.7
 optimizer = torch.optim.Adadelta(model.parameters(), lr=learning_rate)
 
 # Define parameters for fault injection
@@ -66,12 +66,13 @@ while epsilon < 0.51:
     print("Multiplication of all values {} for mnist:".format(epsilon))
     func.evaluate(trainloader, perturbed_model, device)
     if epsilon > 0.09: epsilon += 0.1
-    else: epsilon += 0.01
-
+    else: epsilon += 0.01 
 
 index = 0
-p_custom2 = func.custom_func(model, batch_size, 0, index, input_shape=[3,224,224], layer_types=[torch.nn.Conv2d], use_cuda=torch.cuda.is_available())
-perturbed_model2 = p_custom2.declare_neuron_fault_injection(function=p_custom2.single_bit_flip)
-perturbed_model2.eval()
-print("Accuracy of the model with single bitflip, flipped {} for mnist:".format(index))
-func.evaluate(testloader, perturbed_model2, device)
+while index < 31 :
+        p_custom2 = func.custom_func(model, batch_size, 0, index, input_shape=[3,224,224], layer_types=[torch.nn.Conv2d], use_cuda=torch.cuda.is_available())
+        perturbed_model2 = p_custom2.declare_neuron_fault_injection(function=p_custom2.single_bit_flip)
+        perturbed_model2.eval()
+        print("Accuracy of the model with single bitflip, flipped {} for mnist:".format(index))
+        func.evaluate(testloader, perturbed_model2, device)
+        index = index + 1

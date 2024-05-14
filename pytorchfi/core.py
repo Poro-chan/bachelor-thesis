@@ -369,7 +369,6 @@ class FaultInjection:
 
     def update_layer(self, value=1):
         if self.current_layer >= len(self.layers_type) - 1:
-            warnings.warn("Current layer is already at the last layer.")
             return
         self.current_layer += value
 

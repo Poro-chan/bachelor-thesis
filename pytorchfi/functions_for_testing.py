@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import warnings
 from core import FaultInjection
 
 def train(model, device, train_loader, optimizer, epochs):
@@ -50,12 +49,11 @@ class custom_func(FaultInjection):
     #single bitflip in 32-bit representation
     def single_bit_flip(self, module, input, output) :
         shape = output.shape
-        output_cpu = output.detach().cpu().flatten()
+        output_cpu = output.detach().cpu()
         int32_output = output_cpu.numpy().view(np.int32)
 
-        bit_array = np.unpackbits(int32_output.view(np.uint8))
-        #bit_array[self.index] = 1 - bit_array[self.index]
-        int32_output = np.packbits(bit_array).view(np.int32)
+        bit_mask = 1 << self.index
+        int32_output = int32_output ^ bit_mask
 
         float_output = torch.from_numpy(int32_output.view(np.float32))
         float_output = float_output.reshape(shape)
