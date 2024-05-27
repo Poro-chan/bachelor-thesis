@@ -36,7 +36,7 @@ cifar100trainset = torchvision.datasets.CIFAR100(root='./data', train=True, down
 cifar100trainloader = torch.utils.data.DataLoader(cifar100dataset, batch_size=batch_size, shuffle=True)
 
 # Load pretrained model
-model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True) # densenet121, googlenet, inception_v3, mobilenet_v2, resnet18 (squeezenet1_0, squeezenet1_1) -> excluded
+model = torch.hub.load('pytorch/vision:v0.10.0', 'densenet121', pretrained=True) # densenet121, googlenet, inception_v3, mobilenet_v2, resnet18 (squeezenet1_0, squeezenet1_1) -> excluded
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #model.fc = torch.nn.Linear(model.fc.in_features, 10) #for inception_v3
 #model.classifier[1] = torch.nn.Linear(in_features=model.classifier[1].in_features, out_features=10) # for mobilenet_v2
@@ -47,30 +47,30 @@ optimizer = torch.optim.Adadelta(model.parameters(), lr=learning_rate)
 
 # Define parameters for fault injection
 print("\nTraining model on dataset ... ")
-#epochs = 1
-#func.train(model, device, trainloader, optimizer, epochs)
-epochs = 5
-func.train(model, device, cifar10trainloader, optimizer, epochs)
+epochs = 1
+func.train(model, device, trainloader, optimizer, epochs)
+#epochs = 5
+#func.train(model, device, cifar10trainloader, optimizer, epochs)
 #model.classifier[1] = torch.nn.Linear(in_features=model.classifier[1].in_features, out_features=100)
 #epochs = 10
 #func.train(model, device, cifar100trainloader, optimizer, epochs)
 print("Finished training model!\n")
 
 print("Accuracy of the original model:")
-func.evaluate(cifar10loader, model, device)
-'''
+func.evaluate(testloader, model, device)
+
 epsilon = 0.0025
 while epsilon < 0.55:
     p_custom = func.custom_func(model, batch_size, epsilon, 0, input_shape=[3,224,224], layer_types=[torch.nn.Conv2d], use_cuda=torch.cuda.is_available())
     perturbed_model = p_custom.declare_neuron_fault_injection(function=p_custom.multiply_output)
     perturbed_model.eval()
     print("Multiplication of all values {} for mnist:".format(epsilon))
-    func.evaluate(cifar10loader, perturbed_model, device)
+    func.evaluate(testloader, perturbed_model, device)
     if epsilon > 0.09: epsilon += 0.1
     if 0.01 <= epsilon <= 0.09: epsilon += 0.01
     if epsilon < 0.01: epsilon += 0.0025
     #if epsilon >= 0.01: exit(0)
-'''
+
 '''
 index = 19
 while index < 31 :
@@ -82,15 +82,16 @@ while index < 31 :
         index = index + 1
 
 '''
+'''
 epsilon = 0.01
-index = 2
+index = 20
 while epsilon < 0.51:
     p_custom = func.custom_func(model, batch_size, epsilon, index, input_shape=[3,224,224], layer_types=[torch.nn.Conv2d], use_cuda=torch.cuda.is_available())
-    perturbed_model = p_custom.declare_neuron_fault_injection(function=p_custom.multiply_value_layer)
+    perturbed_model = p_custom.declare_neuron_fault_injection(function=p_custom.multiply_one_value_layer)
     perturbed_model.eval()
     print("Multiplication of one value of the {} layer with {} for mnist:".format(index, epsilon))
     func.evaluate(cifar10loader, perturbed_model, device)
     if epsilon > 0.09: epsilon += 0.1
     if 0.01 <= epsilon <= 0.09: epsilon += 0.01
     #if epsilon < 0.01: epsilon += 0.0025
-
+'''
