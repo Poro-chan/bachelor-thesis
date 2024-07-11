@@ -44,7 +44,7 @@ def random_weight_inj(
     )
 
 
-def zero_func_rand_weight(pfi: core.FaultInjection):
+def zero_func_rand_weight(pfi: core.fault_injection):
     layer, k, c_in, kH, kW = random_weight_location(pfi)
     return pfi.declare_weight_fault_injection(
         function=_zero_rand_weight, layer_num=layer, k=k, dim1=c_in, dim2=kH, dim3=kW
