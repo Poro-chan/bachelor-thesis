@@ -1,11 +1,10 @@
-#Train the model
 import torch
 import torch.nn as nn
 import numpy as np
 from core import FaultInjection
 import random as random
 
-#train the model
+# Train the model
 def train(model, device, train_loader, optimizer, epochs):
     loss_func = nn.CrossEntropyLoss()
     for epoch in range(epochs):
@@ -22,7 +21,7 @@ def train(model, device, train_loader, optimizer, epochs):
             loss = loss_func(output, target)
             loss.backward()
             optimizer.step()
-            if (batch_idx + 1) % 10 == 0:
+            if (batch_idx + 1) % 100 == 0:
                 print(f'Epoch {epoch+1}, Batch {batch_idx+1}, Loss: {loss.item():.4f}')
 
 
@@ -41,13 +40,13 @@ def evaluate(testloader, model, device):
   print('Accuracy: {}/{} ({:.2f}%)\n'.format(
           correct, dataset_size, 100. * correct / dataset_size))
 
-#Weight perturbations
-#1+epsilon weight perturbation
+# Weight perturbations
+# 1+epsilon weight perturbation
 def multiply_value_weight(data, location, epsilon) :
     perturbed_data = data[location] * (1+epsilon)
     return perturbed_data
 
-#single bit flip perturbation
+# Single bit flip perturbation
 def flip_single_bit(data, location, index) :
     shape = data[location].shape
     data_cpu = data[location].detach().cpu()
@@ -65,7 +64,7 @@ def flip_single_bit(data, location, index) :
     else:
         return float_data
 
-#save all weights of one specified layer for perturbing
+# Save all weights of one specified layer for perturbing
 def perturb_one_layer_weight(pfi: FaultInjection, epsilon, index, function = multiply_value_weight):
     corrupt_idx = [[], [], [], [], []]
     shape = list(pfi.get_weights_size(index))
@@ -92,7 +91,7 @@ def perturb_one_layer_weight(pfi: FaultInjection, epsilon, index, function = mul
         function=wrapped_function
     )
 
-#save all weights at the specified index for perturbing
+# Save all weights at the specified index for perturbing
 def perturb_each_layer_weight(pfi: FaultInjection, epsilon, index, function = multiply_value_weight):
     corrupt_idx = [[], [], [], [], []]
     for layer_idx in range(pfi.get_total_layers()):
@@ -122,7 +121,7 @@ def perturb_each_layer_weight(pfi: FaultInjection, epsilon, index, function = mu
         function=wrapped_function
     )
 
-#save all weights for perturbing
+# Save all weights for perturbing
 def perturb_weights(pfi: FaultInjection, epsilon, function = multiply_value_weight):
     corrupt_idx = [[], [], [], [], []]
     for layer_idx in range(pfi.get_total_layers()):
@@ -150,14 +149,14 @@ def perturb_weights(pfi: FaultInjection, epsilon, function = multiply_value_weig
         function=wrapped_function
     )
 
-#custom function for bitflip and multiply values by 1+epsilon
+# Custom function for bitflip and multiply values by 1+epsilon
 class custom_func(FaultInjection):
     def __init__(self, model, batch_size, epsilon, index, **kwargs):
         super().__init__(model, batch_size, **kwargs)
         self.epsilon = epsilon
         self.index = index
 
-    #single bitflip in 32-bit representation
+    # Single bitflip in 32-bit representation
     def single_bit_flip(self, module, input, output) :
         shape = output.shape
         output_cpu = output.detach().cpu()
@@ -168,7 +167,6 @@ class custom_func(FaultInjection):
 
         float_output = torch.from_numpy(int32_output.view(np.float32))
 
-        # Reshape back to the original shape
         float_output = float_output.reshape(shape)
 
         if output.is_cuda :
@@ -180,7 +178,7 @@ class custom_func(FaultInjection):
         if self.current_layer >= self.get_total_layers():
             self.reset_current_layer()
 
-    #flip only one bit in one layer
+    # Flip only one bit in one layer
     def single_bit_flip_layer(self, module, input, output) :
         if self.current_layer == self.epsilon:
             shape = output.shape
@@ -202,16 +200,7 @@ class custom_func(FaultInjection):
         if self.current_layer >= self.get_total_layers():
             self.reset_current_layer()
     
-    #mutiply all output by a factor
-    def multiply_output(self, module, input, output) :
-        output[:] = output * (1+self.epsilon)
-
-        self.update_layer()
-        if self.current_layer >= self.get_total_layers():
-            self.reset_current_layer()
-
-    #multiply only one value by a factor
-    #see whats more vulnerable test multiple things: eg 1 value per layer fixed/random or all values for one layer 
+    # Multiply all values by a factor
     def multiply_value(self, module, input, output) :
         output[:] = output * (1+self.epsilon)
 
@@ -219,6 +208,7 @@ class custom_func(FaultInjection):
         if self.current_layer >= self.get_total_layers():
             self.reset_current_layer()
 
+    # Multiply all values in one layer by a factor
     def multiply_value_layer(self, module, input, output) :
         if(self.index == self.current_layer) :
             output[:] = output * (1+self.epsilon)
@@ -227,6 +217,7 @@ class custom_func(FaultInjection):
         if self.current_layer >= self.get_total_layers():
             self.reset_current_layer()
 
+    # Multiply only one value each layer by a factor
     def multiply_one_value_layer(self, module, input, output) :
         output[self.index] = output[self.index] * (1+self.epsilon)
 
