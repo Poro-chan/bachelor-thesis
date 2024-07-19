@@ -1,9 +1,6 @@
 import torch
-import torch.nn as nn
-import numpy as np
 import torchvision
 import torchvision.transforms as transforms
-import torchvision.models as models
 from core import FaultInjection
 import functions_for_testing as func
 
