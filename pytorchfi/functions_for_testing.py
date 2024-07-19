@@ -149,7 +149,7 @@ def perturb_weights(pfi: FaultInjection, epsilon, function = multiply_value_weig
         function=wrapped_function
     )
 
-# Custom function for bitflip and multiply values by 1+epsilon
+# Custom function for neuron perturbations
 class custom_func(FaultInjection):
     def __init__(self, model, batch_size, epsilon, index, **kwargs):
         super().__init__(model, batch_size, **kwargs)

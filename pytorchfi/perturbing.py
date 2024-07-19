@@ -48,14 +48,14 @@ optimizer = torch.optim.Adadelta(model.parameters(), lr=learning_rate)
 print("\nTraining model on dataset ... ")
 
 #training with MNIST
-#epochs = 1
+epochs = 1
 #model.classifier[1] = torch.nn.Linear(in_features=model.classifier[1].in_features, out_features=10) # for mobilenet_v2
-#func.train(model, device, mnisttrainloader, optimizer, epochs)
+func.train(model, device, mnisttrainloader, optimizer, epochs)
 
 #training with CIFAR10
-epochs = 5
+#epochs = 5
 #model.classifier[1] = torch.nn.Linear(in_features=model.classifier[1].in_features, out_features=10) # for mobilenet_v2
-func.train(model, device, cifar10trainloader, optimizer, epochs)
+#func.train(model, device, cifar10trainloader, optimizer, epochs)
 
 #training with CIFAR100
 #epochs = 9
